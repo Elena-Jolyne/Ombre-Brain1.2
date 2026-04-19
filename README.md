@@ -683,6 +683,106 @@ When connecting via tunnel, ensure:
 
 If using Claude Code, `.claude/settings.json` configures a `SessionStart` hook that auto-calls `breath` on each new or resumed session, surfacing your highest-weight unresolved memories as context. Only active in remote HTTP mode. Set `OMBRE_HOOK_SKIP=1` to disable temporarily.
 
+## 更新 / How to Update
+
+不同部署方式的更新方法。
+
+Different update procedures depending on your deployment method.
+
+### Docker Hub 预构建镜像用户 / Docker Hub Pre-built Image
+
+```bash
+# 拉取最新镜像
+docker pull p0luz/ombre-brain:latest
+
+# 重启容器（记忆数据在 volume 里，不会丢失）
+docker compose -f docker-compose.user.yml down
+docker compose -f docker-compose.user.yml up -d
+```
+
+> 你的记忆数据挂载在 `./buckets:/data`，pull + restart 不会影响已有数据。
+> Your memory data is mounted at `./buckets:/data` — pull + restart won't affect existing data.
+
+### 从源码部署用户 / Source Code Deploy (Docker)
+
+```bash
+cd Ombre-Brain
+
+# 拉取最新代码
+git pull origin main
+
+# 重新构建并重启
+docker compose down
+docker compose build
+docker compose up -d
+```
+
+> `docker compose build` 会重新构建镜像。volume 挂载的记忆数据不受影响。
+> `docker compose build` rebuilds the image. Volume-mounted memory data is unaffected.
+
+### 本地 Python 用户 / Local Python (no Docker)
+
+```bash
+cd Ombre-Brain
+
+# 拉取最新代码
+git pull origin main
+
+# 更新依赖（如有新增）
+pip install -r requirements.txt
+
+# 重启服务
+# Ctrl+C 停止旧进程，然后：
+python server.py
+```
+
+### Render
+
+Render 连接了你的 GitHub 仓库，**自动部署**：
+
+1. 如果你 Fork 了仓库 → 在 GitHub 上同步上游更新（Sync fork），Render 会自动重新部署
+2. 或者手动：Render Dashboard → 你的服务 → **Manual Deploy** → **Deploy latest commit**
+
+> 持久化磁盘（`/opt/render/project/src/buckets`）上的记忆数据在重新部署时保留。
+> Persistent disk data at `/opt/render/project/src/buckets` is preserved across deploys.
+
+### Zeabur
+
+Zeabur 也连接了你的 GitHub 仓库：
+
+1. 在 GitHub 上同步 Fork 的最新代码 → Zeabur 自动触发重新构建部署
+2. 或者手动：Zeabur Dashboard → 你的服务 → **Redeploy**
+
+> Volume 挂载在 `/app/buckets`，重新部署时数据保留。
+> Volume mounted at `/app/buckets` — data persists across redeploys.
+
+### VPS / 自有服务器 / Self-hosted VPS
+
+```bash
+cd Ombre-Brain
+
+# 拉取最新代码
+git pull origin main
+
+# 方式 A：Docker 部署
+docker compose down
+docker compose build
+docker compose up -d
+
+# 方式 B：直接 Python 运行
+pip install -r requirements.txt
+# 重启你的进程管理器（systemd / supervisord / pm2 等）
+sudo systemctl restart ombre-brain   # 示例
+```
+
+> **通用注意事项 / General notes:**
+> - 更新不会影响你的记忆数据（存在 volume 或 buckets 目录里）
+> - 如果 `requirements.txt` 有变化，Docker 用户重新 build 即可自动处理；非 Docker 用户需手动 `pip install -r requirements.txt`
+> - 更新后访问 `/health` 验证服务正常
+> - Updates never affect your memory data (stored in volumes or buckets directory)
+> - If `requirements.txt` changed, Docker rebuild handles it automatically; non-Docker users need `pip install -r requirements.txt`
+> - After updating, visit `/health` to verify the service is running
+
 ## License
 
 MIT
